@@ -23,10 +23,10 @@ export class Database implements IControllerBase
 
   public initRoutes = () : void =>
   {
+    this.router.get("/db/keys", this.getServerKeysHandler);
     this.router.get("/db/stock", this.getStockHandler);
     this.router.get("/db/users", this.getUsersHandler);
     this.router.get("/db/orders", this.getOrdersHandler);
-    this.router.get("/db/keys/server", this.getServerKeysHandler);
   }
 
   connect = async () : Promise<void> =>
@@ -53,16 +53,16 @@ export class Database implements IControllerBase
     let users : IUser[] = [];
     await (await this.getCollection("Users")).aggregate(
       [
-          {
-              $group:
-                  {
-                    _id: "$_id",
-                    username: {$first: "$username"},
-                    password: {$first: "$password"},
-                    email: {$first: "$email"},
-                    key: {$first: "$key"}
-                  }
-          }
+        {
+          $group:
+            {
+              _id: "$_id",
+              username: {$first: "$username"},
+              password: {$first: "$password"},
+              email: {$first: "$email"},
+              key: {$first: "$key"}
+            }
+        }
       ])
       .forEach((user) => {
           users.push(user)
@@ -83,15 +83,15 @@ export class Database implements IControllerBase
     let stock : IProduct[] = []
     await (await this.getCollection("Stock")).aggregate(
       [
-          {
-              $group:
-                  {
-                    _id: "$_id",
-                    name: {$first: "$name"},
-                    img: {$first: "$img"},
-                    qty: {$first: "$qty"}
-                  }
-          }
+        {
+          $group:
+            {
+              _id: "$_id",
+              name: {$first: "$name"},
+              img: {$first: "$img"},
+              qty: {$first: "$qty"}
+            }
+        }
       ])
       .forEach((product) => {
           stock.push(product)
@@ -113,15 +113,15 @@ export class Database implements IControllerBase
     // TODO Need to define schema for Orders
     await (await this.getCollection("Orders")).aggregate(
       [
-          {
-              $group:
-                  {
-                    _id: "$_id",
-                    name: {$first: "$name"},
-                    img: {$first: "$img"},
-                    qty: {$first: "$qty"}
-                  }
-          }
+        {
+          $group:
+            {
+              _id: "$_id",
+              name: {$first: "$name"},
+              img: {$first: "$img"},
+              qty: {$first: "$qty"}
+            }
+        }
       ])
       .forEach((order) => {
           orders.push(order)
@@ -143,15 +143,15 @@ export class Database implements IControllerBase
     // TODO Need to define schema for ServerKeys
     await (await this.getCollection("ServerKeys")).aggregate(
       [
-          {
-              $group:
-                  {
-                    _id: "$_id",
-                    name: {$first: "$name"},
-                    img: {$first: "$img"},
-                    qty: {$first: "$qty"}
-                  }
-          }
+        {
+          $group:
+            {
+              _id: "$_id",
+              name: {$first: "$name"},
+              img: {$first: "$img"},
+              qty: {$first: "$qty"}
+            }
+        }
       ])
       .forEach((server_key) => {
           server_keys.push(server_key)
