@@ -1,9 +1,10 @@
 import { Key } from "./key";
 import { Request, Response, Router } from "express";
-import  { IProduct, IOrder, IUser, IServerKey, CollectionName, PrettyCollection } from '../interfaces/database';
 import IControllerBase from '../interfaces/IControllerBase';
-import { EncryptType, Privacy } from "../interfaces/key/types";
+import { OPD } from './orderProcessingDepartment';
 import { MongoClient, InsertOneWriteOpResult, Collection, ObjectId } from "mongodb";
+import  { IProduct, IOrder, IUser, IServerKey, CollectionName, PrettyCollection } from '../interfaces/database';
+import { EncryptType } from "../interfaces/key/types";
 
 const URI = process.env["MongoURI"] || "mongodb://localhost:27017/";
 
@@ -11,6 +12,7 @@ export class Database implements IControllerBase
 {
   public path : string;
   public router : any;
+  public opd : OPD;
 
   client : MongoClient;
 
@@ -19,6 +21,7 @@ export class Database implements IControllerBase
     this.path = '/db';
     this.router = Router();
     this.initRoutes();
+    this.opd = new OPD(this, "tonetta777@gmail.com", "weenies");
   }
 
   public initRoutes = () : void =>
@@ -27,6 +30,8 @@ export class Database implements IControllerBase
     this.router.get("/db/stock", this.getStockHandler);
     this.router.get("/db/users", this.getUsersHandler);
     this.router.get("/db/orders", this.getOrdersHandler);
+    
+    this.router.post("/db/order", this.createOrderHandler);
   }
 
   connect = async () : Promise<void> =>
@@ -78,7 +83,7 @@ export class Database implements IControllerBase
     res.send(users);
   }
 
-  public getStockHelper = async () : Promise<IProduct[]> =>
+  getStockHelper = async () : Promise<IProduct[]> =>
 	{
     let stock : IProduct[] = []
     await (await this.getCollection("Stock")).aggregate(
@@ -248,8 +253,8 @@ export class Database implements IControllerBase
   createUser = async (username : string, password : string, email : string) : Promise<string> =>
   {
     let user : InsertOneWriteOpResult<any> = 
-    await this.client.db("452Final").
-    collection("Users")
+    await this.client.db("452Final")
+    .collection("Users")
     .insertOne(
       {
         username: username,
@@ -273,8 +278,8 @@ export class Database implements IControllerBase
 
   createOrder = async (order : Object) : Promise<string> =>
 	{
-    let addingOrder = await this.client.db("452Final").
-    collection("Orders")
+    let addingOrder = await this.client.db("452Final")
+    .collection("Orders")
     .insertOne(
       order
     );
@@ -285,8 +290,8 @@ export class Database implements IControllerBase
 
   upsertItem = async (query : Object, update : Object) : Promise<ObjectId> =>
 	{
-    let addingItem = await this.client.db("452Final").
-    collection("Stock")
+    let addingItem = await this.client.db("452Final")
+    .collection("Stock")
     .updateOne(
       query, update, { upsert: true }
     );
@@ -296,14 +301,29 @@ export class Database implements IControllerBase
   }
 
   createServerKey = async (item : Object) : Promise<string> =>{
-    let addingItem = await this.client.db("452Final").
-    collection("ServerKeys")
+    let addingItem = await this.client.db("452Final")
+    .collection("ServerKeys")
     .insertOne(
       item
     );
 
     if(!addingItem) { console.debug("Could not add item!"); return ""; }
     return addingItem.insertedId;
+  }
+
+  createOrderHandler = async (req : Request, res : Response) : Promise<void> =>
+  {
+    let order : IOrder = req.body?.order;
+    if(!order) { console.debug("Order not found!"); res.sendStatus(400); }
+
+    let encryptType : EncryptType = req.body?.encryptType;
+    if(!order) { console.debug("Bad Encrypt Type!"); res.sendStatus(400); }
+
+    let processed = await this.opd.processOrder(encryptType, order)
+    if(!processed) { res.sendStatus(400); }
+
+    res.status(200);
+    res.send(order);
   }
 
 }

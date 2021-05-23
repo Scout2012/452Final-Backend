@@ -18,9 +18,8 @@ export interface IUser {
 
 export interface IOrder {
     _id : ObjectID;
-    name : string;
-    img : string;
-    qty : number;
+    items : IProduct[];
+    total : number;
 }
 
 export interface IServerKey {

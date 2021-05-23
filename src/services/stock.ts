@@ -1,6 +1,6 @@
 import { ObjectId } from "bson";
-import { createImportSpecifier } from "typescript";
 import { Database } from "./database";
+import { IProduct } from "../interfaces/database";
 
 type NumericalAttribute = 'quantity' | 'price';
 
@@ -13,48 +13,65 @@ export class Stock{
     }
 
     //Check if an item exists, by default, it checks ID, can be changed with optional input variable
-    itemExists = async (item : string, filter : string = "_id") : Promise<boolean> =>
+    itemExists = async (id : ObjectId) : Promise<boolean> =>
 	{
-        let stock = await this.database.getStock();
-        let itemCheck = await stock.findOne({
-            [filter] : item
-        })
-        return itemCheck != null;
+        let stock = await this.database.getStockHelper();
+        return stock.length > 0;
     }
 
     itemExistsByName = async (itemName : string) : Promise<boolean> =>
 	{
-        return await this.itemExists(itemName, "item");
+        let stock = await this.database.getStockHelper();
+
+        stock.forEach(item => {
+            if(item.name == itemName)
+            {
+                return true;
+            }
+        });
+
+        return false;
     }
 
-    itemExistsById = async (itemId : string) : Promise<boolean> =>
+    getItemByName = async (itemName : string) : Promise<IProduct | null> =>
 	{
-        return await this.itemExists(itemId);
+        let stock = await this.database.getStockHelper();
+
+        stock.forEach(item => {
+            if(item.name == itemName)
+            {
+                return item;
+            }
+        });
+
+        return null;
     }
 
-    addItem = async (item : string, quantity : number, price : number) : Promise<string> => {
-        if(await this.itemExistsByName(item)){
-            console.log("Cannot add already existing item");
-            let itemId = (await this.database.getItemByName(item))._id;
-            await this.increaseQuantity(itemId, quantity);
-            return (await this.database.getItemByName(item))._id;
-        }
-        else if(quantity < 0 || price < 0){
-            console.log("Cannot add an item with negative quality or price");
-            return null;
-        }
-        let itemObject = {
-            item: item,
-            quantity: quantity,
-            price: price
-        }
-        return await this.database.createItem(itemObject);
+
+    addItem = async (itemName : string, quantity : number, price : number) : Promise<string> => {
+        // if(await this.itemExistsByName(itemName)){
+        //     let item = await this.getItemByName(itemName);
+        //     await this.increaseQuantity(itemName, quantity);
+        //     return (await this.database.getItemByName(item))._id;
+        // }
+        // else if(quantity < 0 || price < 0){
+        //     console.log("Cannot add an item with negative quality or price");
+        //     return null;
+        // }
+        // let itemObject = {
+        //     item: item,
+        //     quantity: quantity,
+        //     price: price
+        // }
+        // return await this.database.createItem(itemObject);
+        return "";
     }
 
     getNumericalAttribute = async(itemId : string, attribute : NumericalAttribute) : Promise<number> =>
 	{
-        let item = await this.database.getItem(itemId);
-        return item[attribute];
+        // let item = await this.database.getItem(itemId);
+        // return item[attribute];
+        return -1;
     }
 
     getQuantity = async(itemId : string) : Promise<number> => {
@@ -73,29 +90,29 @@ export class Stock{
 
     modifyNumericalAttribute = async (itemId : string, modification : number, attribute : NumericalAttribute, set : boolean = false) =>
 	{
-        if(!this.itemExists(itemId))
-        {
-            console.log("Cannot add to item that does not exist!");
-            return false;
-        }
-        let filter = {
-            _id: new ObjectId(itemId)
-        }
+        // if(!this.itemExists(itemId))
+        // {
+        //     console.log("Cannot add to item that does not exist!");
+        //     return false;
+        // }
+        // let filter = {
+        //     _id: new ObjectId(itemId)
+        // }
 
-        let command = set ? "$set" : "$inc";
-        let update = {
-            [command]: {
-                [attribute]: modification
-            }
-        }
-        let currentValue = await this.getNumericalAttribute(itemId, attribute);
-        if((!set && currentValue+modification < 0) || (set && modification < 0))  //Can occur with the decrease function, or inputting negative numbers manually
-        {
-            console.log("This will cause a negative number!")
-            return false;
-        }
-        let stock = await this.database.getStock();
-        await stock.updateOne(filter, update);
+        // let command = set ? "$set" : "$inc";
+        // let update = {
+        //     [command]: {
+        //         [attribute]: modification
+        //     }
+        // }
+        // let currentValue = await this.getNumericalAttribute(itemId, attribute);
+        // if((!set && currentValue+modification < 0) || (set && modification < 0))  //Can occur with the decrease function, or inputting negative numbers manually
+        // {
+        //     console.log("This will cause a negative number!")
+        //     return false;
+        // }
+        // let stock = await this.database.getStock();
+        // await stock.updateOne(filter, update);
         return true;
     }
 
@@ -141,28 +158,28 @@ export class Stock{
 
     updateStockBasedOnOrder = async (order : Object) : Promise<boolean> =>
 	{
-        let items = Object.keys(order.items);
-        let validOrder = true;
-        items.forEach( async (item) =>
-	    {
-            let requestedQuantity = order.items[item];
-            let enoughStock = await this.enoughStock(item, requestedQuantity)
-            if(!enoughStock)
-            {
-                console.log("There is not enough stock to fulfill this order!");
-                validOrder = false;
-            }
-        })
-        if(!validOrder)
-        {
-            console.log("This is not a valid order!");
-            return false;
-        }
+        // let items = Object.keys(order.items);
+        // let validOrder = true;
+        // items.forEach( async (item) =>
+	    // {
+        //     let requestedQuantity = order.items[item];
+        //     let enoughStock = await this.enoughStock(item, requestedQuantity)
+        //     if(!enoughStock)
+        //     {
+        //         console.log("There is not enough stock to fulfill this order!");
+        //         validOrder = false;
+        //     }
+        // })
+        // if(!validOrder)
+        // {
+        //     console.log("This is not a valid order!");
+        //     return false;
+        // }
 
-        items.forEach ( async (item) =>
-	    {
-            await this.decreaseQuantity(item, order.items[item])
-        })
+        // items.forEach ( async (item) =>
+	    // {
+        //     await this.decreaseQuantity(item, order.items[item])
+        // })
 
         return true;
     }
