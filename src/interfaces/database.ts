@@ -1,4 +1,5 @@
 import { ObjectID } from "bson";
+import { KeyLike } from "crypto";
 
 export interface IProduct {
     _id : ObjectID;
@@ -12,7 +13,7 @@ export interface IUser {
     username : string;
     password : number;
     email : string;
-    key: string[];
+    key: string | KeyLike;
 }
 
 export interface IOrder {

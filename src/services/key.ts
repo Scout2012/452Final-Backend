@@ -3,6 +3,7 @@ import { generateKeyPair, createSign, createVerify, sign } from "crypto";
 import {Database} from "./database";
 import { EncryptType, IKeyPair } from '../interfaces/key/types';
 import { ObjectId } from "mongodb";
+import { IUser } from "../interfaces/database";
 
 export class Key
 {
@@ -79,15 +80,13 @@ export class Key
 
   savePublicKey = async (id : string, publicKey : string) : Promise<void> =>
   {
-      let users = await this.database.getUsers()
       let filter = { _id: new ObjectId(id) }
-      let keyStringName = this.encryptType+"Key"
       let updateDoc = {
         $set: {
-          [keyStringName]: publicKey
+          "key": publicKey
         }
       }
-      await users.updateOne(filter, updateDoc);
+      await this.database.upsertItem(filter, updateDoc);
   }
 
   sign = async (order : string) : Promise<Buffer> =>
@@ -102,9 +101,11 @@ export class Key
 
   verify = async (id : string, order : string, signature : Buffer) : Promise<boolean> =>
   {
-      let user = await this.database.getUserHelper(id)
+      let user : IUser | null = await this.database.getUserHelper(id)
+
+      if(!user) { console.debug(`User with ID ${id} does not exist.`); return false; }
       
-      let publicKey = user[this.encryptType + "Key"]
+      let publicKey = user.key
       let verify = createVerify(this.encryptType.toUpperCase() + "-SHA1")
       verify.update(order)
       verify.end()

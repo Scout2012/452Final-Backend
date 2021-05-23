@@ -203,10 +203,19 @@ export class Database implements IControllerBase
     return this.findById(id, retrieved_collection);
   }
 
-  // getUser = async (id : string) : Promise<any> =>
-	// {
-  //   return this.getDocument(id, "Users");
-  // }
+  getUserHelper = async (id : string) : Promise<IUser | null> =>
+  {
+    let object_id = new ObjectId(id);
+    let collection : PrettyCollection = await this.getUsersHelper();
+    collection.forEach(document => {
+      if(document._id == object_id)
+      {
+        console.log("found!");
+        return document
+      }
+    });
+    return null;
+  }
 
   // getItem = async(id : string) : Promise<any> =>
 	// {
@@ -234,7 +243,7 @@ export class Database implements IControllerBase
   // }
 
 
-  // TODO
+  // TODO Link this to a POST(or PUT(?)) endpoint
 
   createUser = async (username : string, password : string, email : string) : Promise<string> =>
   {
