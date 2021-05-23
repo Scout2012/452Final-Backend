@@ -94,7 +94,8 @@ export class Database implements IControllerBase
               _id: "$_id",
               name: {$first: "$name"},
               img: {$first: "$img"},
-              qty: {$first: "$qty"}
+              qty: {$first: "$qty"},
+              price: {$first: "$price"}
             }
         }
       ])
@@ -124,7 +125,8 @@ export class Database implements IControllerBase
               _id: "$_id",
               name: {$first: "$name"},
               img: {$first: "$img"},
-              qty: {$first: "$qty"}
+              qty: {$first: "$qty"},
+              price: {$first: "$price"}
             }
         }
       ])
@@ -176,7 +178,6 @@ export class Database implements IControllerBase
     collection.forEach(document => {
       if(document._id == id)
       {
-        console.log("found!");
         return document
       }
     });
@@ -208,17 +209,17 @@ export class Database implements IControllerBase
     return this.findById(id, retrieved_collection);
   }
 
-  getUserHelper = async (id : string) : Promise<IUser | null> =>
+  getUserHelper = async (username : string) : Promise<IUser | null> =>
   {
-    let object_id = new ObjectId(id);
     let collection : PrettyCollection = await this.getUsersHelper();
-    collection.forEach(document => {
-      if(document._id == object_id)
+    for(var i = 0; i < collection.length; i++)
+    {
+      if(collection[i].username == username)
       {
-        console.log("found!");
-        return document
+        return collection[i];
       }
-    });
+
+    }
     return null;
   }
 
@@ -276,7 +277,7 @@ export class Database implements IControllerBase
     return user.insertedId;
   }
 
-  createOrder = async (order : Object) : Promise<string> =>
+  submitOrder = async (order : Object) : Promise<string> =>
 	{
     let addingOrder = await this.client.db("452Final")
     .collection("Orders")
@@ -313,17 +314,20 @@ export class Database implements IControllerBase
 
   createOrderHandler = async (req : Request, res : Response) : Promise<void> =>
   {
-    let order : IOrder = req.body?.order;
-    if(!order) { console.debug("Order not found!"); res.sendStatus(400); }
+    let user : string = req.body?.user;
+    if(!user) { console.debug("User not found!"); res.sendStatus(400); return; }
+
+    let cart : IProduct[] = req.body?.cart;
+    if(!cart) { console.debug("Cart not found!"); res.sendStatus(400); return; }
 
     let encryptType : EncryptType = req.body?.encryptType;
-    if(!order) { console.debug("Bad Encrypt Type!"); res.sendStatus(400); }
+    if(!encryptType) { console.debug("Bad Encrypt Type!"); res.sendStatus(400); return; }
 
-    let processed = await this.opd.processOrder(encryptType, order)
-    if(!processed) { res.sendStatus(400); }
+    let processed = await this.opd.processOrder(encryptType, cart, user);
+    if(!processed) { res.sendStatus(400); return; }
 
     res.status(200);
-    res.send(order);
+    res.send(cart);
   }
 
 }

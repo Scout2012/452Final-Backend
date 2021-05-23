@@ -1,7 +1,8 @@
 import express from 'express';
 import { Application } from 'express';
-import IControllerBase from './interfaces/IControllerBase';
+import cors from 'cors'
 import { Database } from './services/database'
+import IControllerBase from './interfaces/IControllerBase';
 
 class App
 {
@@ -37,10 +38,12 @@ class App
     {
         this.app.listen(this.port, () => 
         {
+            // TODO: Remove this(?)
+            this.app.use(cors())
+            this.app.use(express.json());
+            
             // Need to init the database here and skip the routes function of this
             // because we need to connect to the database before anything.
-            this.app.use(express.json());
-
             let database = new Database();
             this.app.use("/", database.router)
 

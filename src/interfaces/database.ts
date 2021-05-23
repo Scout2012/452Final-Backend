@@ -6,6 +6,7 @@ export interface IProduct {
     name : string;
     img : string;
     qty : number;
+    price : string;
 }
 
 export interface IUser {
@@ -17,7 +18,7 @@ export interface IUser {
 }
 
 export interface IOrder {
-    _id : ObjectID;
+    _id? : ObjectID;
     items : IProduct[];
     total : number;
 }

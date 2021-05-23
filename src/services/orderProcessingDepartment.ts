@@ -2,7 +2,7 @@ import { Key } from "./key";
 import { Stock } from "./stock";
 import { EmailClient } from "./email";
 import { Database } from "./database";
-import { IOrder } from "../interfaces/database";
+import { IOrder, IProduct, PrettyCollection } from "../interfaces/database";
 import { EncryptType } from "../interfaces/key/types";
 import { ObjectId } from "bson";
 
@@ -17,10 +17,31 @@ export class OPD
         this.emailClient = new EmailClient(emailUser, emailPass, "gmail");
     }
 
+    private calculateTotal = async (cart : IProduct[]) : Promise<number> =>
+    {
+        let total : number = 0;
+        cart.forEach(product => {
+            total += parseFloat(product.price);
+        });
+
+        console.log(total);
+        return total;
+    }
+
+    private createOrder = async (cart : IProduct[]) : Promise<IOrder> =>
+    {
+        return {
+            items: cart,
+            total: await this.calculateTotal(cart)
+        }
+    }
+
     private storeOrder = async (order : IOrder) : Promise<boolean> =>
-	{ //Should not be called outside of processOrder
+	{ 
+        //Should not be called outside of processOrder
         if(await this.stock.updateStockBasedOnOrder(order)){
-            await this.database.createOrder(order);
+            let calculatedOrder = await this.createOrder(order.items);
+            await this.database.submitOrder(calculatedOrder);
             return true;
         }
         return false;
@@ -93,7 +114,7 @@ export class OPD
         return true;
     }
 
-    updateTotal = async (order : IOrder, itemId : string, requestedQuantity : number) : Promise<boolean> =>
+    updateTotal = async (order : IOrder, itemId : ObjectId, requestedQuantity : number) : Promise<boolean> =>
 	{
         let price = await this.stock.getPrice(itemId);
         let update = price*requestedQuantity;
@@ -105,19 +126,28 @@ export class OPD
         return true; 
     }
 
-    processOrder = async (encryptType : EncryptType, order : IOrder) : Promise<boolean> =>
+    processOrder = async (encryptType : EncryptType, cart : IProduct[], username : string) : Promise<boolean> =>
 	{
-        // let key = new Key(encryptType, this.database);
-        // let signature = await key.sign(JSON.stringify(this.order));
-        // let verify = await key.verify(this.order.userId, JSON.stringify(this.order), signature);
-        // if(!verify){
+        let key = new Key(encryptType, this.database);
+        // let signature = await key.sign(JSON.stringify(cart));
+        let order = await this.createOrder(cart)
+
+        // TODO: Is it ok to use toHexString here?
+        // let verify = await key.verify(order._id.toHexString(), JSON.stringify(order), signature);
+        // if(!verify)
+        // {
         //     console.log("Could not verify order");
         //     return false;
         // }
-        // this.storeOrder(order);
-        // let body = "Your order has been processed!";
-        // let email = (await this.database.getUserHelper(order["userId"]))!.email;
-        // this.emailClient.sendEmail(email, "Order processed!", body)
+        await this.storeOrder(order);
+        let body = "Your order has been processed!";
+        let user = await this.database.getUserHelper(username);
+        if(!user) { console.debug("User does not exist!"); return false; }
+
+
+        if(!user.email) { console.debug("Couldn't send email!"); return true; /* throw new Error(`Couldn't send email to user ${user}`); */ }
+        
+        this.emailClient.sendEmail(user.email, "Order processed!", body)
         return true;
     }
 }
