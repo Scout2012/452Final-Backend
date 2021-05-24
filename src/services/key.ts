@@ -67,11 +67,11 @@ export class Key implements IControllerBase
     let plainText = publicDecrypt(userPublicKey, serverPrivateDecrypt);
     if(this.isOrder(plainText))
     {
-      res.send("order verified");
       res.status(200);
+      res.send("order verified");
     }
-    res.send("order denied");
     res.status(406);
+    res.send("order denied");
   }
 
   isOrder = async(plainText : string) : Promise<boolean> =>
