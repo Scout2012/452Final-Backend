@@ -63,7 +63,6 @@ export class Key implements IControllerBase
 
   verifyResponse = async(req: Request, res: Response) : Promise<void> =>
   {
-<<<<<<< HEAD
     let serverPrivateKey = await this.getServerPrivateKey();
 
     let verifiedAndConfidentialOrder = req.body.verifiedAndConfidentialOrder;
@@ -74,20 +73,6 @@ export class Key implements IControllerBase
 
     let userId = req.body.id;
     if(this.verify(userId, plainTextOrder, signature))
-=======
-    if(!req.body  || !req.body.id || !req.body.encryptedOrder || !req.body.encryptedOrder) { console.debug("Bad Request"); res.sendStatus(400); return; }
-    
-    let encryptedOrder = req.body.encryptedOrder;
-    let encryptType = req.body.encryptType;
-    let userId = req.body.id;
-    let userPublicKey = await this.getUserPublicKey(userId, encryptType)
-    let serverPrivateKey = await this.getServerPrivateKey();
-    let serverPrivateDecrypt= privateDecrypt(serverPrivateKey, Buffer.from(encryptedOrder, "utf-8"))
-    let plainText = publicDecrypt(userPublicKey, Buffer.from(serverPrivateDecrypt)).toString();
-    console.log(plainText)
-    
-    if(this.isOrder(plainText))
->>>>>>> bbfcfc2c4c6f0921d206a6a31e24705e5d4e9999
     {
       res.status(200);
       res.send("order verified");
@@ -120,19 +105,11 @@ export class Key implements IControllerBase
   createServerKeys = async () : Promise<void> =>{
     let keys = await this.createKeys();
     let publicKey = {
-<<<<<<< HEAD
       keyType: "public",
       key: keys.publicKey
     }
     let privateKey = {
       keyType: "private",
-=======
-      keyType: "public" + this.encryptType,
-      key: keys.publicKey
-    }
-    let privateKey = {
-      keyType: "private" + this.encryptType,
->>>>>>> bbfcfc2c4c6f0921d206a6a31e24705e5d4e9999
       key: keys.privateKey
     }
     await this.database.createServerKey(publicKey);
