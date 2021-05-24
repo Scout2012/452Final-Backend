@@ -69,6 +69,7 @@ export class Key implements IControllerBase
     {
       res.status(200);
       res.send("order verified");
+      return;
     }
     res.status(406);
     res.send("order denied");
