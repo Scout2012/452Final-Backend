@@ -64,7 +64,7 @@ export class Key implements IControllerBase
     let userPublicKey = await this.getUserPublicKey(userId, encryptType)
     let serverPrivateKey = await this.getServerPrivateKey();
     let serverPrivateDecrypt= privateDecrypt(serverPrivateKey, Buffer.from(encryptedOrder, "utf-8"))
-    let plainText = publicDecrypt(userPublicKey, Buffer.from(serverPrivateDecrypt));
+    let plainText = publicDecrypt(userPublicKey, serverPrivateDecrypt);
     if(this.isOrder(plainText))
     {
       res.send("order verified");
