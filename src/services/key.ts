@@ -116,11 +116,11 @@ export class Key implements IControllerBase
     await this.database.createServerKey(privateKey);
   }
 
-  createKeys = async (encryptType : EncryptType) : Promise<IKeyPair> =>
+  createKeys = async () : Promise<IKeyPair> =>
   {
     return new Promise((res, rej) =>
       {
-        generateKeyPair(encryptType, {
+        generateKeyPair(this.encryptType, {
           modulusLength: 2048,
           publicKeyEncoding: {
             type: 'spki',
