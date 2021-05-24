@@ -5,6 +5,9 @@ import { OPD } from './orderProcessingDepartment';
 import { MongoClient, InsertOneWriteOpResult, Collection, ObjectId } from "mongodb";
 import  { IProduct, IOrder, IUser, IServerKey, CollectionName, PrettyCollection } from '../interfaces/database';
 import { EncryptType } from "../interfaces/key/types";
+import * as dotenv from 'dotenv';
+
+dotenv.config();
 
 const URI = process.env["MongoURI"] || "mongodb://localhost:27017/";
 
@@ -21,7 +24,12 @@ export class Database implements IControllerBase
     this.path = '/db';
     this.router = Router();
     this.initRoutes();
-    this.opd = new OPD(this, "tonetta777@gmail.com", "weenies");
+    
+    let email = process.env['OPD_EMAIL'];
+    let password = process.env['OPD_PASS'];
+
+    if(!email || !password) { console.error("Please set your OPD_EMAIL and/or OPD_PASS .env value"); throw new Error("Invalid Email Credentials"); }
+    this.opd = new OPD(this, email, password);
   }
 
   public initRoutes = () : void =>

@@ -40,7 +40,6 @@ export class Login implements IControllerBase
     let user = await this.database.getUserHelper(user_data.username);
     if(!user) { console.debug("User not in system yet!"); res.sendStatus(401); return; }
     if(user?.password != sha256(user_data.password)) { res.sendStatus(401); return; }
-    console.debug("Creating user session!");
     //Send 200!
     console.log("OK!");
     res.sendStatus(200);
