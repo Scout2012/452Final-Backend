@@ -41,6 +41,7 @@ export class Database implements IControllerBase
     let connect = await this.client.connect();
 
     if(!connect) { console.debug("Could not connect to database."); }
+
   }
 
   disconnect = async () : Promise<void> =>

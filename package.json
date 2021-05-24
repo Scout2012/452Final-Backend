@@ -13,6 +13,7 @@
     "@types/nodemailer": "^6.4.1",
     "cors": "^2.8.5",
     "express": "^4.17.1",
+    "js-sha256": "^0.9.0",
     "mongodb": "^3.6.8",
     "nodemailer": "^6.6.0"
   },

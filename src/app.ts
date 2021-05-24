@@ -3,6 +3,7 @@ import { Application } from 'express';
 import cors from 'cors'
 import { Database } from './services/database'
 import IControllerBase from './interfaces/IControllerBase';
+import { Login } from './services/login';
 
 class App
 {
@@ -48,6 +49,7 @@ class App
             this.app.use("/", database.router)
 
             database.connect().then(() => {
+                this.app.use("/", new Login(database).router);
                 console.log(`App listening on the http://localhost:${this.port}`);
             })
         });

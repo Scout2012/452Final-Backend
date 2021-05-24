@@ -12,7 +12,7 @@ export interface IProduct {
 export interface IUser {
     _id : ObjectID;
     username : string;
-    password : number;
+    password : string;
     email : string;
     key: string | KeyLike;
 }
