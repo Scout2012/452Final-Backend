@@ -116,11 +116,11 @@ export class Key implements IControllerBase
     await this.database.createServerKey(privateKey);
   }
 
-  createKeys = async () : Promise<IKeyPair> =>
+  createKeys = async (encryptType : EncryptType) : Promise<IKeyPair> =>
   {
     return new Promise((res, rej) =>
       {
-        generateKeyPair("rsa", {
+        generateKeyPair(encryptType, {
           modulusLength: 2048,
           publicKeyEncoding: {
             type: 'spki',
@@ -170,8 +170,9 @@ export class Key implements IControllerBase
 
   sign = async (order : Buffer) : Promise<Buffer> =>
 	{
+    let algorithm = this.encryptType == 'rsa' ? "RSA-SHA1" : "sha1";
     let privateKey = readFileSync("./" + this.encryptType + "Key.pem")
-    return createSign(this.encryptType.toUpperCase() + "-SHA1").update(order).sign({
+    return createSign(algorithm).update(order).sign({
       key: privateKey,
       passphrase: 'top secret'
     });
