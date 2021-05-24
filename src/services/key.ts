@@ -78,12 +78,13 @@ export class Key implements IControllerBase
   {
     let keys = ["_id", "userId", "items", "total", "date"];
     let order = JSON.parse(plainText);
+    let verified = true;
     Object.keys(order).forEach(function(key) {
       if(!keys.includes(key)){
-        return false;
+        verified = false;
       }
       });
-    return true;
+    return verified;
   }
   
   createAndStoreKeys = async (id : string) =>
@@ -96,11 +97,11 @@ export class Key implements IControllerBase
   createServerKeys = async () : Promise<void> =>{
     let keys = await this.createKeys();
     let publicKey = {
-      keyType: "public"+this.encryptType,
+      keyType: "public",
       key: keys.publicKey
     }
     let privateKey = {
-      keyType: "private"+this.encryptType,
+      keyType: "private",
       key: keys.privateKey
     }
     await this.database.createServerKey(publicKey);
