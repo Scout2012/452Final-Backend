@@ -11,7 +11,8 @@ export class OPD
     database : Database;
     stock : Stock;
     emailClient : EmailClient
-    constructor(database : Database, emailUser : string, emailPass : string){
+    constructor(database : Database, emailUser : string, emailPass : string)
+    {
         this.database = database;
         this.stock = new Stock(this.database);
         this.emailClient = new EmailClient(emailUser, emailPass, "gmail");

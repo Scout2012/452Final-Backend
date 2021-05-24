@@ -4,6 +4,7 @@ import cors from 'cors'
 import { Database } from './services/database'
 import IControllerBase from './interfaces/IControllerBase';
 import { Login } from './services/login';
+import { Key } from './services/key';
 
 class App
 {
@@ -50,6 +51,7 @@ class App
 
             database.connect().then(() => {
                 this.app.use("/", new Login(database).router);
+                this.app.use("/", new Key( ,database));
                 console.log(`App listening on the http://localhost:${this.port}`);
             })
         });

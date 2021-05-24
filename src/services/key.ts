@@ -1,10 +1,11 @@
 import { writeFile, readFileSync } from "fs";
+import * as express from 'express';
 import { generateKeyPair, createSign, createVerify, sign, publicDecrypt, privateDecrypt } from "crypto";
 import {Database} from "./database";
 import { EncryptType, IKeyPair } from '../interfaces/key/types';
 import { ObjectId } from "mongodb";
-import { IUser } from "../interfaces/database";
-import { Router} from "express";
+import { IServerKey, IUser } from "../interfaces/database";
+import { Router, Request, Response } from "express";
 import IControllerBase from "../interfaces/IControllerBase";
 
 export class Key implements IControllerBase
@@ -25,21 +26,24 @@ export class Key implements IControllerBase
   public initRoutes = () : void =>
   {
     this.router.use(express.json());
-    this.router.post(this.path+"/publicKey", this.getServerPublicKey);
-    this.router.post(this.path+"/verify", this.verifyResponse);
+    this.router.post(this.path + "/publicKey", this.getServerPublicKey);
+    this.router.post(this.path + "/verify", this.verifyResponse);
   }
 
   getServerPublicKey = async(req: Request, res: Response) : Promise<void> =>
   {
-    let keytype = "public" + req.body.encryptType
-    let serverKeys = await (await this.database.getCollection("ServerKeys")).findOne({
+    if(!req.body || !req.body.encryptType) { console.debug("Bad Request"); res.sendStatus(400); return; }
+
+    let keytype = "public" + req.body.encryptType;
+    let serverKeys : IServerKey = await (await this.database.getCollection("ServerKeys")).findOne({
       keyType: keytype
     })
     res.status(200);
     res.send(serverKeys[key]);
   }
 
-  getServerPrivateKey = async() : Promise<string>{
+  getServerPrivateKey = async() : Promise<string> =>
+  {
     let keyType = "private";
     let serverKeys = await (await this.database.getCollection("ServerKeys")).findOne({
       keyType: keyType
@@ -52,8 +56,7 @@ export class Key implements IControllerBase
     let user = await (await this.database.getCollection("Users")).findOne({
       "_id": new ObjectId(userId)
     })
-    let key = user[encryptType+"Key"];
-    return key;
+    return user[encryptType + "Key"];
   }
 
   verifyResponse = async(req: Request, res: Response) : Promise<void> =>
@@ -64,7 +67,8 @@ export class Key implements IControllerBase
     let userPublicKey = await this.getUserPublicKey(userId, encryptType)
     let serverPrivateKey = await this.getServerPrivateKey();
     let serverPrivateDecrypt= privateDecrypt(serverPrivateKey, Buffer.from(encryptedOrder, "utf-8"))
-    let plainText = publicDecrypt(userPublicKey, Buffer.from(serverPrivateDecrypt));
+    let plainText = publicDecrypt(userPublicKey, Buffer.from(serverPrivateDecrypt)).toString();
+    console.log(plainText)
     if(this.isOrder(plainText))
     {
       res.send("order verified");
@@ -96,11 +100,11 @@ export class Key implements IControllerBase
   createServerKeys = async () : Promise<void> =>{
     let keys = await this.createKeys();
     let publicKey = {
-      keyType: "public"+this.encryptType,
+      keyType: "public" + this.encryptType,
       key: keys.publicKey
     }
     let privateKey = {
-      keyType: "private"+this.encryptType,
+      keyType: "private" + this.encryptType,
       key: keys.privateKey
     }
     await this.database.createServerKey(publicKey);
@@ -162,11 +166,10 @@ export class Key implements IControllerBase
   sign = async (order : string) : Promise<Buffer> =>
 	{
     let privateKey = readFileSync("./" + this.encryptType + "Key.pem")
-    var signature = createSign(this.encryptType.toUpperCase() + "-SHA1").update(order).sign({
+    return createSign(this.encryptType.toUpperCase() + "-SHA1").update(order).sign({
       key: privateKey,
       passphrase: 'top secret'
     });
-    return signature
   }
 
   verify = async (id : string, order : string, signature : Buffer) : Promise<boolean> =>
