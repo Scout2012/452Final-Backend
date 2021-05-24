@@ -1,21 +1,91 @@
 import { writeFile, readFileSync } from "fs";
-import { generateKeyPair, createSign, createVerify, sign } from "crypto";
+import { generateKeyPair, createSign, createVerify, sign, publicDecrypt, privateDecrypt } from "crypto";
 import {Database} from "./database";
 import { EncryptType, IKeyPair } from '../interfaces/key/types';
 import { ObjectId } from "mongodb";
 import { IUser } from "../interfaces/database";
+import { Router} from "express";
+import IControllerBase from "../interfaces/IControllerBase";
 
-export class Key
+export class Key implements IControllerBase
 {
   encryptType : EncryptType; 
+  router : any;
   database : Database;
+  path : string;
 
   constructor(encryptType : EncryptType, database : Database)
   {
+      this.path = '/key';
       this.encryptType = encryptType;
+      this.router = Router();
       this.database = database;
   }
 
+  public initRoutes = () : void =>
+  {
+    this.router.use(express.json());
+    this.router.post(this.path+"/publicKey", this.getServerPublicKey);
+    this.router.post(this.path+"/verify", this.verifyResponse);
+  }
+
+  getServerPublicKey = async(req: Request, res: Response) : Promise<void> =>
+  {
+    let keytype = "public" + req.body.encryptType
+    let serverKeys = await (await this.database.getCollection("ServerKeys")).findOne({
+      keyType: keytype
+    })
+    res.status(200);
+    res.send(serverKeys[key]);
+  }
+
+  getServerPrivateKey = async() : Promise<string>{
+    let keyType = "private";
+    let serverKeys = await (await this.database.getCollection("ServerKeys")).findOne({
+      keyType: keyType
+    })
+    return serverKeys[key];
+  }
+
+  getUserPublicKey = async(userId : string, encryptType: EncryptType) : Promise<string> =>
+  {
+    let user = await (await this.database.getCollection("Users")).findOne({
+      "_id": new ObjectId(userId)
+    })
+    let key = user[encryptType+"Key"];
+    return key;
+  }
+
+  verifyResponse = async(req: Request, res: Response) : Promise<void> =>
+  {
+    let encryptedOrder = req.body.encryptedOrder;
+    let encryptType = req.body.encryptType;
+    let userId = req.body.id;
+    let userPublicKey = await this.getUserPublicKey(userId, encryptType)
+    let serverPrivateKey = await this.getServerPrivateKey();
+    let serverPrivateDecrypt= privateDecrypt(serverPrivateKey, Buffer.from(encryptedOrder, "utf-8"))
+    let plainText = publicDecrypt(userPublicKey, Buffer.from(serverPrivateDecrypt));
+    if(this.isOrder(plainText))
+    {
+      res.send("order verified");
+      res.status(200);
+    }
+    res.send("order denied");
+    res.status(406);
+  }
+
+  isOrder = async(plainText : string) : Promise<boolean> =>
+  {
+    let keys = ["_id", "userId", "items", "total", "date"];
+    let order = JSON.parse(plainText);
+    Object.keys(order).forEach(function(key) {
+      if(!keys.includes(key)){
+        return false;
+      }
+      });
+    return true;
+  }
+  
   createAndStoreKeys = async (id : string) =>
   {
       let keys : IKeyPair = await this.createKeys()
