@@ -58,14 +58,16 @@ export class Key implements IControllerBase
 
   verifyResponse = async(req: Request, res: Response) : Promise<void> =>
   {
-    let encryptedOrder = req.body.encryptedOrder;
-    let encryptType = req.body.encryptType;
-    let userId = req.body.id;
-    let userPublicKey = await this.getUserPublicKey(userId, encryptType)
     let serverPrivateKey = await this.getServerPrivateKey();
-    let serverPrivateDecrypt= privateDecrypt(serverPrivateKey, Buffer.from(encryptedOrder, "utf-8"))
-    let plainText = publicDecrypt(userPublicKey, serverPrivateDecrypt);
-    if(this.isOrder(plainText))
+
+    let verifiedAndConfidentialOrder = req.body.verifiedAndConfidentialOrder;
+    let signature = privateDecrypt(serverPrivateKey, Buffer.from(verifiedAndConfidentialOrder, "utf-8"))
+
+    let confidentialOrder = req.body.confidentialOrder;
+    let plainTextOrder = privateDecrypt(serverPrivateKey, Buffer.from(confidentialOrder));
+
+    let userId = req.body.id;
+    if(this.verify(userId, plainTextOrder, signature))
     {
       res.status(200);
       res.send("order verified");
@@ -161,7 +163,7 @@ export class Key implements IControllerBase
       await this.database.upsertItem(filter, updateDoc);
   }
 
-  sign = async (order : string) : Promise<Buffer> =>
+  sign = async (order : Buffer) : Promise<Buffer> =>
 	{
     let privateKey = readFileSync("./" + this.encryptType + "Key.pem")
     var signature = createSign(this.encryptType.toUpperCase() + "-SHA1").update(order).sign({
@@ -171,7 +173,7 @@ export class Key implements IControllerBase
     return signature
   }
 
-  verify = async (id : string, order : string, signature : Buffer) : Promise<boolean> =>
+  verify = async (id : string, order : Buffer, signature : Buffer) : Promise<boolean> =>
   {
       let user : IUser | null = await this.database.getUserHelper(id)
 
@@ -184,7 +186,7 @@ export class Key implements IControllerBase
       return verify.verify(publicKey, signature)
   }
 
-  signAndVerify = async (id: string, order: string) : Promise<boolean> =>
+  signAndVerify = async (id: string, order: Buffer) : Promise<boolean> =>
 	{
     let signature = await this.sign(order)
 
