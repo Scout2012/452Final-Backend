@@ -51,7 +51,7 @@ class App
 
             database.connect().then(() => {
                 this.app.use("/", new Login(database).router);
-                this.app.use("/", new Key( ,database));
+                this.app.use("/", new Key("rsa" , database).router);
                 console.log(`App listening on the http://localhost:${this.port}`);
             })
         });

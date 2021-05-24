@@ -21,6 +21,8 @@ export class Key implements IControllerBase
       this.encryptType = encryptType;
       this.router = Router();
       this.database = database;
+
+      this.initRoutes();
   }
 
   public initRoutes = () : void =>
@@ -34,12 +36,12 @@ export class Key implements IControllerBase
   {
     if(!req.body || !req.body.encryptType) { console.debug("Bad Request"); res.sendStatus(400); return; }
 
-    let keytype = "public" + req.body.encryptType;
-    let serverKeys : IServerKey = await (await this.database.getCollection("ServerKeys")).findOne({
-      keyType: keytype
+    let keyType = "public" + req.body.encryptType;
+    let serverKeys : any = await (await this.database.getCollection("ServerKeys")).findOne({
+      keyType: keyType
     })
     res.status(200);
-    res.send(serverKeys[key]);
+    res.send(serverKeys[keyType]);
   }
 
   getServerPrivateKey = async() : Promise<string> =>
@@ -48,7 +50,7 @@ export class Key implements IControllerBase
     let serverKeys = await (await this.database.getCollection("ServerKeys")).findOne({
       keyType: keyType
     })
-    return serverKeys[key];
+    return serverKeys[keyType];
   }
 
   getUserPublicKey = async(userId : string, encryptType: EncryptType) : Promise<string> =>
@@ -61,6 +63,8 @@ export class Key implements IControllerBase
 
   verifyResponse = async(req: Request, res: Response) : Promise<void> =>
   {
+    if(!req.body  || !req.body.id || !req.body.encryptedOrder || !req.body.encryptedOrder) { console.debug("Bad Request"); res.sendStatus(400); return; }
+    
     let encryptedOrder = req.body.encryptedOrder;
     let encryptType = req.body.encryptType;
     let userId = req.body.id;
@@ -69,6 +73,7 @@ export class Key implements IControllerBase
     let serverPrivateDecrypt= privateDecrypt(serverPrivateKey, Buffer.from(encryptedOrder, "utf-8"))
     let plainText = publicDecrypt(userPublicKey, Buffer.from(serverPrivateDecrypt)).toString();
     console.log(plainText)
+    
     if(this.isOrder(plainText))
     {
       res.send("order verified");
