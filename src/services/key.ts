@@ -119,10 +119,11 @@ export class Key implements IControllerBase
   
   createKeys = async () : Promise<IKeyPair> =>
   {
+    let length = this.encryptType=='rsa' ? 3072 : 2048 
     return new Promise((res, rej) =>
       {
         generateKeyPair('rsa', {
-          modulusLength: 2048,
+          modulusLength: length,
           publicKeyEncoding: {
             type: 'spki',
             format: 'pem'
