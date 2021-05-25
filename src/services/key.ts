@@ -122,7 +122,7 @@ export class Key implements IControllerBase
     let length = this.encryptType=='rsa' ? 3072 : 2048 
     return new Promise((res, rej) =>
       {
-        generateKeyPair('rsa', {
+        generateKeyPair(this.encryptType, {
           modulusLength: length,
           publicKeyEncoding: {
             type: 'spki',
@@ -176,7 +176,7 @@ export class Key implements IControllerBase
     let privateKey = readFileSync("./" + this.encryptType + "Key.pem")
     return createSign(algorithm).update(order).sign({
       key: privateKey,
-      passphrase: 'top secret'
+      passphrase: ''
     });
   }
 
@@ -187,7 +187,8 @@ export class Key implements IControllerBase
       if(!user) { console.debug(`User with ID ${id} does not exist.`); return false; }
       
       let publicKey = user.key
-      let verify = createVerify(this.encryptType.toUpperCase() + "-SHA1")
+      let algorithm = this.encryptType == 'rsa' ? "RSA-SHA1" : "sha1"
+      let verify = createVerify(algorithm)
       verify.update(order)
       verify.end()
       return verify.verify(publicKey, signature)
