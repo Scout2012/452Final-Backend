@@ -1,6 +1,6 @@
 import { writeFile, readFileSync } from "fs";
 import * as express from 'express';
-import { publicDecrypt, publicEncrypt, generateKeyPair, createSign, createVerify, privateDecrypt } from "crypto";
+import { publicDecrypt, publicEncrypt, generateKeyPair, createSign, createVerify, privateDecrypt, constants, createPrivateKey } from "crypto";
 import {Database} from "./database";
 import { EncryptType, IKeyPair } from '../interfaces/key/types';
 import { ObjectId } from "mongodb";
@@ -28,20 +28,19 @@ export class Key implements IControllerBase
   public initRoutes = () : void =>
   {
     this.router.use(express.json());
-    this.router.post(this.path + "/publicKey", this.getServerPublicKey);
+    this.router.get(this.path + "/publicKey", this.getServerPublicKey);
     this.router.post(this.path + "/verify", this.verifyResponse);
   }
 
   getServerPublicKey = async(req: Request, res: Response) : Promise<void> =>
   {
-    if(!req.body || !req.body.encryptType) { console.debug("Bad Request"); res.sendStatus(400); return; }
 
     let keyType = "public";
     let serverKeys : any = await (await this.database.getCollection("ServerKeys")).findOne({
       keyType: keyType
     })
     res.status(200);
-    res.send(serverKeys[keyType]);
+    res.send(serverKeys);
   }
 
   getServerPrivateKey = async() : Promise<string> =>
@@ -49,8 +48,10 @@ export class Key implements IControllerBase
     let keyType = "private";
     let serverKeys = await (await this.database.getCollection("ServerKeys")).findOne({
       keyType: keyType
-    })
-    return serverKeys[keyType];
+    });
+
+    console.log(serverKeys)
+    return serverKeys.key;
   }
 
   getUserPublicKey = async(userId : string, encryptType: EncryptType) : Promise<string> =>
@@ -61,18 +62,43 @@ export class Key implements IControllerBase
     return user[encryptType + "Key"];
   }
 
+  base64ToArrayBuffer(base64 : any) {
+    var binary_string = window.atob(base64);
+    var len = binary_string.length;
+    var bytes = new Uint8Array(len);
+    for (var i = 0; i < len; i++) {
+        bytes[i] = binary_string.charCodeAt(i);
+    }
+    return bytes.buffer;
+  }
+
   verifyResponse = async(req: Request, res: Response) : Promise<void> =>
   {
     let serverPrivateKey = await this.getServerPrivateKey();
 
-    let verifiedAndConfidentialOrder = req.body.verifiedAndConfidentialOrder;
-    let signature = privateDecrypt(serverPrivateKey, Buffer.from(verifiedAndConfidentialOrder, "utf-8"))
+    if(!serverPrivateKey) { console.debug("Could not fetch server private keys"); res.sendStatus(0); return;}
 
-    let confidentialOrder = req.body.confidentialOrder;
-    let plainTextOrder = privateDecrypt(serverPrivateKey, Buffer.from(confidentialOrder));
+    let privateKey = createPrivateKey(serverPrivateKey);
+    console.log(privateKey)
 
-    let userId = req.body.id;
-    if(this.verify(userId, plainTextOrder, signature))
+    if(!req.body) { console.debug("No body"); res.sendStatus(400); return; }
+    
+    let data = req.body;
+    if(!data.encryptType || !data.encryptedOrder || !data.signedAndEncryptedOrder) { console.debug("Invalid body"); res.sendStatus(400); return; }
+
+    let keyType = req.body.encryptType;
+
+    // Decrypt so we can verify the signature
+    let verifiedAndConfidentialOrder = data.signedAndEncryptedOrder;
+    let vAndCBuff = Buffer.from(verifiedAndConfidentialOrder, 'base64');
+    let signature = privateDecrypt({key: privateKey, oaepHash: 'sha256'}, vAndCBuff)
+
+    // Decrypt so we have something to verify against
+    let confidentialOrder = Buffer.from(data.encryptedOrder, 'base64');
+    let plainTextOrder = privateDecrypt({key: privateKey, oaepHash: 'sha256'}, confidentialOrder);
+    console.log(confidentialOrder.toString('utf-8'))
+    let userId = data.user;
+    if(await this.verify(userId, plainTextOrder, signature, keyType))
     {
       res.status(200);
       res.send("order verified");
@@ -97,13 +123,16 @@ export class Key implements IControllerBase
   
   createAndStoreKeys = async (id : string) =>
   {
-      let keys : IKeyPair = await this.createKeys()
+      let keys : IKeyPair | null = await this.createKeys()
+      if(!keys) { console.log("Could not create a keypair"); return; }
       await this.savePrivateKey(keys.privateKey)
       await this.savePublicKey(id, keys.publicKey)
   }
 
   createServerKeys = async () : Promise<void> =>{
-    let keys = await this.createKeys();
+    let keys : IKeyPair | null = await this.createKeys();
+    if(!keys) { console.log("Could not create a keypair"); return; }
+
     let publicKey = {
       keyType: "public",
       key: keys.publicKey
@@ -115,14 +144,17 @@ export class Key implements IControllerBase
     await this.database.createServerKey(publicKey);
     await this.database.createServerKey(privateKey);
   }
-
   
-  createKeys = async () : Promise<IKeyPair> =>
+  createKeys = async () : Promise<IKeyPair | null> =>
   {
-    let length = this.encryptType=='rsa' ? 3072 : 2048 
-    return new Promise((res, rej) =>
+    let keyPair : IKeyPair | null = null;
+    let length : number = 3072;
+    if(this.encryptType == 'rsa')
+    {
+      length = 3072
+      keyPair = await new Promise((res, rej) =>
       {
-        generateKeyPair(this.encryptType, {
+        generateKeyPair('rsa', {
           modulusLength: length,
           publicKeyEncoding: {
             type: 'spki',
@@ -130,9 +162,7 @@ export class Key implements IControllerBase
           },
           privateKeyEncoding: {
             type: 'pkcs8',
-            format: 'pem',
-            cipher: 'aes-256-cbc',
-            passphrase: 'top secret'
+            format: 'pem'
           }
         },
           (err : Error | null, pub : string, priv : string) =>
@@ -141,8 +171,35 @@ export class Key implements IControllerBase
             res({ publicKey: pub, privateKey: priv })
           }
         )
-      }
-    )
+      })
+    }
+    else if(this.encryptType == 'dsa')
+    {
+      length = 3072
+      keyPair = await new Promise((res, rej) =>
+      {
+        generateKeyPair('dsa', {
+          modulusLength: length,
+          divisorLength: 224,
+          publicKeyEncoding: {
+            type: 'spki',
+            format: 'pem'
+          },
+          privateKeyEncoding: {
+            type: 'pkcs8',
+            format: 'pem'
+          }
+        },
+          (err : Error | null, pub : string, priv : string) =>
+          {
+            if(err) { console.log(err); rej(err); }
+            res({ publicKey: pub, privateKey: priv })
+          }
+        )
+      })
+    }
+    if(!keyPair) { console.debug("Invalid Encryption Type!"); return null; }
+    return keyPair;
   }
   
   savePrivateKey = async (privateKey : string) : Promise<void> =>
@@ -172,7 +229,7 @@ export class Key implements IControllerBase
 
   sign = async (order : Buffer) : Promise<Buffer> =>
 	{
-    let algorithm = this.encryptType == 'rsa' ? "RSA-SHA1" : "sha1";
+    let algorithm = this.encryptType == 'rsa' ? "RSA-SHA256" : "sha256";
     let privateKey = readFileSync("./" + this.encryptType + "Key.pem")
     return createSign(algorithm).update(order).sign({
       key: privateKey,
@@ -180,24 +237,28 @@ export class Key implements IControllerBase
     });
   }
 
-  verify = async (id : string, order : Buffer, signature : Buffer) : Promise<boolean> =>
+  verify = async (id : string, order : Buffer, signature : Buffer, keyType : EncryptType) : Promise<boolean> =>
   {
-      let user : IUser | null = await this.database.getUserHelper(id)
+    let user : IUser | null = await this.database.getUserHelper(id)
 
-      if(!user) { console.debug(`User with ID ${id} does not exist.`); return false; }
-      
-      let publicKey = user.key
-      let algorithm = this.encryptType == 'rsa' ? "RSA-SHA1" : "sha1"
-      let verify = createVerify(algorithm)
-      verify.update(order)
-      verify.end()
-      return verify.verify(publicKey, signature)
+    if(!user) { console.debug(`User with ID ${id} does not exist.`); return false; }
+    let publicKey;
+    if(keyType == 'rsa') { publicKey = user.rsaKey }
+    if(keyType == 'dsa') { publicKey = user.dsaKey }
+
+    if(!publicKey) { console.debug("No public key with that user"); return false; }
+
+    let algorithm = this.encryptType == 'rsa' ? "RSA-SHA256" : "sha256"
+    let verify = createVerify(algorithm)
+    verify.update(order)
+    verify.end()
+    return verify.verify(publicKey, signature)
   }
 
   signAndVerify = async (id: string, order: Buffer) : Promise<boolean> =>
 	{
     let signature = await this.sign(order)
 
-    return await this.verify(id, order, signature)
+    return await this.verify(id, order, signature, 'rsa')
   }
 }

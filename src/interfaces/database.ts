@@ -1,5 +1,6 @@
 import { ObjectID } from "bson";
 import { KeyLike } from "crypto";
+import { IKeyPair } from "./key/types";
 
 export interface IProduct {
     _id : ObjectID;
@@ -14,7 +15,8 @@ export interface IUser {
     username : string;
     password : string;
     email : string;
-    key: string | KeyLike;
+    dsaKey: string | KeyLike;
+    rsaKey: string | KeyLike;
 }
 
 export interface IOrder {
@@ -28,6 +30,11 @@ export interface IServerKey {
     name : string;
     img : string;
     qty : number;
+}
+
+export interface IUserKeyPair {
+    dsa : IKeyPair;
+    rsa : IKeyPair;
 }
 
 export type CollectionName = 'Users' | 'Orders' | 'Stock' | 'ServerKeys';

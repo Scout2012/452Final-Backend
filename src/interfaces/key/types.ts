@@ -1,4 +1,4 @@
-export type EncryptType = 'rsa' | 'dsa';
+export type EncryptType = 'rsa' | 'dsa' | 'x448';
 
 export interface IKeyPair
 {

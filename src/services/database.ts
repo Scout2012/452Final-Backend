@@ -3,9 +3,10 @@ import { Request, Response, Router } from "express";
 import IControllerBase from '../interfaces/IControllerBase';
 import { OPD } from './orderProcessingDepartment';
 import { MongoClient, InsertOneWriteOpResult, Collection, ObjectId } from "mongodb";
-import  { IProduct, IOrder, IUser, IServerKey, CollectionName, PrettyCollection } from '../interfaces/database';
-import { EncryptType } from "../interfaces/key/types";
+import  { IProduct, IOrder, IUser, IServerKey, CollectionName, PrettyCollection, IUserKeyPair } from '../interfaces/database';
+import { EncryptType, IKeyPair } from "../interfaces/key/types";
 import * as dotenv from 'dotenv';
+import { publicDecrypt } from 'crypto'
 
 dotenv.config();
 
@@ -16,11 +17,13 @@ export class Database implements IControllerBase
   public path : string;
   public router : any;
   public opd : OPD;
+  public key : Key;
 
   client : MongoClient;
 
   constructor(uri : string = "mongodb://localhost:27017/") {
     this.client = new MongoClient(uri);
+    this.key = new Key('rsa', this);
     this.path = '/db';
     this.router = Router();
     this.initRoutes();
@@ -74,7 +77,8 @@ export class Database implements IControllerBase
               username: {$first: "$username"},
               password: {$first: "$password"},
               email: {$first: "$email"},
-              key: {$first: "$key"}
+              dsaKey: {$first: "$dsaKey"},
+              rsaKey: {$first: "$rsaKey"}
             }
         }
       ])
@@ -218,6 +222,20 @@ export class Database implements IControllerBase
     return this.findById(id, retrieved_collection);
   }
 
+  userExists = async (user : IUser) : Promise<boolean> =>
+  {
+    let collection : PrettyCollection = await this.getUsersHelper();
+    for(var i = 0; i < collection.length; i++)
+    {
+      if(collection[i].email == user.email || collection[i].username == user.username)
+      {
+        return true;
+      }
+
+    }
+    return false;
+  }
+
   getUserHelper = async (username : string) : Promise<IUser | null> =>
   {
     let collection : PrettyCollection = await this.getUsersHelper();
@@ -257,24 +275,42 @@ export class Database implements IControllerBase
   //   return key.key;
   // }
 
-
-  // TODO Link this to a POST(or PUT(?)) endpoint
-
-
   addUserHandler = async(req : Request, res : Response) : Promise<any> =>
   {
-    if(await this.createUser(req.body.username, req.body.password, req.body.email) != ""){
+    if(!req.body || !req.body.data) { console.debug("Bad or missing body"); res.sendStatus(400); return; }
+    
+    let user : IUser = JSON.parse(req.body.data);
+    
+    if(!user.username || !user.password || !user.email) { console.debug("Insufficient user information"); res.sendStatus(400); return; }
+    
+    let userExists = await this.userExists(user);
+
+    if(userExists) { console.debug("User already exisits"); res.sendStatus(409); return; }
+    
+    // Generate keypair for user
+    let rsa_key = new Key("rsa", this);
+    let dsa_key = new Key("dsa", this);
+
+    let rsaKeyPair : IKeyPair | null = await rsa_key.createKeys();
+    let dsaKeyPair : IKeyPair | null = await dsa_key.createKeys();
+
+    if(!rsaKeyPair || !dsaKeyPair) { console.debug("Could not generate one of the keypairs!"); res.sendStatus(0); return; }
+
+    if(await this.createUser(user.username, user.password, user.email, {rsa: rsaKeyPair, dsa: dsaKeyPair}) != "")
+    {
       res.status(200);
-      res.send("User Added");
+      res.send({ dsa: dsaKeyPair.privateKey, rsa: rsaKeyPair.privateKey });
       return;
     }
-    res.status(400);
+
+    // Most likely conflict, do more checking when we're not on a time constraint lmao
+    res.status(409);
     res.send("Account Creation Failed");
-    return;
   }
   
-  createUser = async (username : string, password : string, email : string) : Promise<string> =>
+  createUser = async (username : string, password : string, email : string, userKeyPairs : IUserKeyPair) : Promise<string> =>
   {
+    console.log(username, password, email, userKeyPairs)
     let user : InsertOneWriteOpResult<any> = 
     await this.client.db("452Final")
     .collection("Users")
@@ -283,18 +319,12 @@ export class Database implements IControllerBase
         username: username,
         password: password,
         email: email,
+        rsaKey: userKeyPairs.rsa.publicKey,
+        dsaKey: userKeyPairs.dsa.publicKey
       }
     );
 
     if(!user) { console.debug("Could not insert user!"); return ""; }
-
-    let id = user.insertedId;
-    
-    let rsa_key = new Key("rsa", this);
-    // let dsa_key = new Key("dsa", this.database);
-
-    await rsa_key.createAndStoreKeys(id);
-    // await dsa_key.createAndStoreKeys(id);
 
     return user.insertedId;
   }
@@ -336,17 +366,25 @@ export class Database implements IControllerBase
 
   createOrderHandler = async (req : Request, res : Response) : Promise<void> =>
   {
-    let user : string = req.body?.user;
+    if(!req.body) { console.debug("No body provided!"); res.sendStatus(400); return; }
+    let order = req.body;
+
+    let user : string = order.user;
     if(!user) { console.debug("User not found!"); res.sendStatus(400); return; }
-
-    let cart : IProduct[] = req.body?.cart;
+    
+    let cart = Buffer.from(order.encryptedOrder);
     if(!cart) { console.debug("Cart not found!"); res.sendStatus(400); return; }
-
-    let encryptType : EncryptType = req.body?.encryptType;
+    
+    let encryptType : EncryptType = order.encryptType;
     if(!encryptType) { console.debug("Bad Encrypt Type!"); res.sendStatus(400); return; }
+    
+    let signedAndEncrypted = Buffer.from(order.signedAndEncryptedOrder);
+    if(!signedAndEncrypted) { console.debug("Bad Encrypt Type!"); res.sendStatus(400); return; }
 
-    let processed = await this.opd.processOrder(encryptType, cart, user);
-    if(!processed) { res.sendStatus(400); return; }
+    let signedOrder = crypto
+    console.log(await this.key.verify(user, cart, signedAndEncrypted, encryptType))
+    // let processed = await this.opd.processOrder(encryptType, cart, user);
+    // if(!processed) { res.sendStatus(400); return; }
 
     res.status(200);
     res.send(cart);
