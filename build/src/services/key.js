@@ -113,7 +113,7 @@ class Key {
         });
         this.createKeys = () => __awaiter(this, void 0, void 0, function* () {
             return new Promise((res, rej) => {
-                crypto_1.generateKeyPair("rsa", {
+                crypto_1.generateKeyPair('rsa', {
                     modulusLength: 2048,
                     publicKeyEncoding: {
                         type: 'spki',
@@ -153,8 +153,9 @@ class Key {
             yield this.database.upsertItem(filter, updateDoc);
         });
         this.sign = (order) => __awaiter(this, void 0, void 0, function* () {
+            let algorithm = this.encryptType == 'rsa' ? "RSA-SHA1" : "sha1";
             let privateKey = fs_1.readFileSync("./" + this.encryptType + "Key.pem");
-            return crypto_1.createSign(this.encryptType.toUpperCase() + "-SHA1").update(order).sign({
+            return crypto_1.createSign(algorithm).update(order).sign({
                 key: privateKey,
                 passphrase: 'top secret'
             });

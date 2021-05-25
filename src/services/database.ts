@@ -38,7 +38,7 @@ export class Database implements IControllerBase
     this.router.get("/db/stock", this.getStockHandler);
     this.router.get("/db/users", this.getUsersHandler);
     this.router.get("/db/orders", this.getOrdersHandler);
-    this.router.get("/db/addUser", this.addUserHandler)
+    this.router.post("/db/addUser", this.addUserHandler) //Called when adding a user, request a "username", "password", and "email"
     this.router.post("/db/order", this.createOrderHandler);
   }
 

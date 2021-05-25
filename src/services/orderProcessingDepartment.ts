@@ -5,6 +5,7 @@ import { Database } from "./database";
 import { IOrder, IProduct, PrettyCollection } from "../interfaces/database";
 import { EncryptType } from "../interfaces/key/types";
 import { ObjectId } from "bson";
+import IControllerBase from "../interfaces/IControllerBase";
 
 export class OPD
 {

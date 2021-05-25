@@ -1,6 +1,6 @@
 import { writeFile, readFileSync } from "fs";
 import * as express from 'express';
-import { generateKeyPair, createSign, createVerify, sign, publicDecrypt, privateDecrypt } from "crypto";
+import { publicDecrypt, publicEncrypt, generateKeyPair, createSign, createVerify, privateDecrypt } from "crypto";
 import {Database} from "./database";
 import { EncryptType, IKeyPair } from '../interfaces/key/types';
 import { ObjectId } from "mongodb";
@@ -36,7 +36,7 @@ export class Key implements IControllerBase
   {
     if(!req.body || !req.body.encryptType) { console.debug("Bad Request"); res.sendStatus(400); return; }
 
-    let keyType = "public" + req.body.encryptType;
+    let keyType = "public";
     let serverKeys : any = await (await this.database.getCollection("ServerKeys")).findOne({
       keyType: keyType
     })
@@ -116,11 +116,12 @@ export class Key implements IControllerBase
     await this.database.createServerKey(privateKey);
   }
 
+  
   createKeys = async () : Promise<IKeyPair> =>
   {
     return new Promise((res, rej) =>
       {
-        generateKeyPair(this.encryptType, {
+        generateKeyPair('rsa', {
           modulusLength: 2048,
           publicKeyEncoding: {
             type: 'spki',

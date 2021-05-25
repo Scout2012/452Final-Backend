@@ -43,6 +43,7 @@ class Database {
             this.router.get("/db/stock", this.getStockHandler);
             this.router.get("/db/users", this.getUsersHandler);
             this.router.get("/db/orders", this.getOrdersHandler);
+            this.router.get("/db/addUser", this.addUserHandler);
             this.router.post("/db/order", this.createOrderHandler);
         };
         this.connect = () => __awaiter(this, void 0, void 0, function* () {
@@ -216,6 +217,16 @@ class Database {
         //   return key.key;
         // }
         // TODO Link this to a POST(or PUT(?)) endpoint
+        this.addUserHandler = (req, res) => __awaiter(this, void 0, void 0, function* () {
+            if ((yield this.createUser(req.body.username, req.body.password, req.body.email)) != "") {
+                res.status(200);
+                res.send("User Added");
+                return;
+            }
+            res.status(400);
+            res.send("Account Creation Failed");
+            return;
+        });
         this.createUser = (username, password, email) => __awaiter(this, void 0, void 0, function* () {
             let user = yield this.client.db("452Final")
                 .collection("Users")
