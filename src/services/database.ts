@@ -38,7 +38,7 @@ export class Database implements IControllerBase
     this.router.get("/db/stock", this.getStockHandler);
     this.router.get("/db/users", this.getUsersHandler);
     this.router.get("/db/orders", this.getOrdersHandler);
-    
+    this.router.get("/db/addUser", this.addUserHandler)
     this.router.post("/db/order", this.createOrderHandler);
   }
 
@@ -260,6 +260,19 @@ export class Database implements IControllerBase
 
   // TODO Link this to a POST(or PUT(?)) endpoint
 
+
+  addUserHandler = async(req : Request, res : Response) : Promise<any> =>
+  {
+    if(await this.createUser(req.body.username, req.body.password, req.body.email) != ""){
+      res.status(200);
+      res.send("User Added");
+      return;
+    }
+    res.status(400);
+    res.send("Account Creation Failed");
+    return;
+  }
+  
   createUser = async (username : string, password : string, email : string) : Promise<string> =>
   {
     let user : InsertOneWriteOpResult<any> = 
