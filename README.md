@@ -1,5 +1,29 @@
 # 452Final-Backend
 
+Names of group members:
+	Carlos Garcia
+	Hounghuy Hourt
+	Jacob Powell
+	Angel Quiroga
+	Kenneth Truong
+	
+Contributions of each members:
+	Carlos Garcia
+		Carried the team on his back
+	
+	Hounghuy Hourt
+		Documentation
+	
+	Jacob Powell
+		Carried the team on his back
+	
+	Angel Quiroga
+		Documentation
+		Got carried on Jacob and Carlos' back
+	
+	Kenneth Truong
+		Documentation
+
 Prerequisites:
 - [MongoDB](https://docs.mongodb.com/manual/installation/)
 - Make sure to have mongo running on port 27017 while attempting to run this project
