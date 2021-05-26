@@ -9,20 +9,23 @@ Names of group members:
 	
 Contributions of each members:
 	Carlos Garcia
-		Carried the team on his back
-	
+		Front-end and back-end
+	  
 	Hounghuy Hourt
 		Documentation
-	
+	  Front-end
+    
 	Jacob Powell
-		Carried the team on his back
+		Front-end and back-end
 	
 	Angel Quiroga
 		Documentation
-		Got carried on Jacob and Carlos' back
+    Testing
+    Front-end
 	
 	Kenneth Truong
 		Documentation
+    Front-end
 
 Prerequisites:
 - [MongoDB](https://docs.mongodb.com/manual/installation/)
