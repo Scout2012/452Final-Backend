@@ -1,0 +1,41 @@
+[{
+  "_id": {
+    "$oid": "60a9934248d291bc7834794c"
+  },
+  "name": "Bingus",
+  "img": "https://crypto-final.s3-us-west-1.amazonaws.com/bingus.png",
+  "qty": 18,
+  "price": 12.99
+},{
+  "_id": {
+    "$oid": "60aa130848d291bc78347952"
+  },
+  "name": "Kite",
+  "img": "https://crypto-final.s3-us-west-1.amazonaws.com/kite.png",
+  "qty": 10,
+  "price": 29.99
+},{
+  "_id": {
+    "$oid": "60aa133048d291bc78347953"
+  },
+  "name": "Cheese",
+  "img": "https://crypto-final.s3-us-west-1.amazonaws.com/cheese.png",
+  "qty": 10,
+  "price": 5.99
+},{
+  "_id": {
+    "$oid": "60aa134248d291bc78347954"
+  },
+  "name": "Kyle",
+  "img": "https://crypto-final.s3-us-west-1.amazonaws.com/kyle.png",
+  "qty": 10,
+  "price": 3000
+},{
+  "_id": {
+    "$oid": "60aa137948d291bc78347955"
+  },
+  "name": "Dog",
+  "img": "https://crypto-final.s3-us-west-1.amazonaws.com/dog.png",
+  "qty": 10,
+  "price": 299
+}]
