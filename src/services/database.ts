@@ -294,11 +294,11 @@ export class Database implements IControllerBase
     let rsaKeyPair : IKeyPair | null = await rsa_key.createKeys();
     let dsaKeyPair : IKeyPair | null = await dsa_key.createKeys();
 
-    let password = createHash('SHA-256').update(user.password).digest('hex')
+    // let password = createHash('SHA-256').update(user.password).digest('hex')
 
     if(!rsaKeyPair || !dsaKeyPair) { console.debug("Could not generate one of the keypairs!"); res.sendStatus(0); return; }
 
-    if(await this.createUser(user.username, password, user.email, {rsa: rsaKeyPair, dsa: dsaKeyPair}) != "")
+    if(await this.createUser(user.username, user.password, user.email, {rsa: rsaKeyPair, dsa: dsaKeyPair}) != "")
     {
       res.status(200);
       res.send({ dsa: dsaKeyPair.privateKey, rsa: rsaKeyPair.privateKey });
@@ -370,23 +370,19 @@ export class Database implements IControllerBase
   {
     if(!req.body) { console.debug("No body provided!"); res.sendStatus(400); return; }
     let order = req.body;
+    console.log(req.body)
 
     let user : string = order.user;
     if(!user) { console.debug("User not found!"); res.sendStatus(400); return; }
     
-    let cart = Buffer.from(order.encryptedOrder);
+    let cart = order.cart;
     if(!cart) { console.debug("Cart not found!"); res.sendStatus(400); return; }
     
     let encryptType : EncryptType = order.encryptType;
     if(!encryptType) { console.debug("Bad Encrypt Type!"); res.sendStatus(400); return; }
     
-    let signedAndEncrypted = Buffer.from(order.signedAndEncryptedOrder);
-    if(!signedAndEncrypted) { console.debug("Bad Encrypt Type!"); res.sendStatus(400); return; }
-
-    let signedOrder = crypto
-    console.log(await this.key.verify(user, cart, signedAndEncrypted, encryptType))
-    // let processed = await this.opd.processOrder(encryptType, cart, user);
-    // if(!processed) { res.sendStatus(400); return; }
+    let processed = await this.opd.processOrder(encryptType, cart, user);
+    if(!processed) { res.sendStatus(400); return; }
 
     res.status(200);
     res.send(cart);

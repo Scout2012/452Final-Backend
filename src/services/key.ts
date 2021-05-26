@@ -75,11 +75,7 @@ export class Key implements IControllerBase
   verifyResponse = async(req: Request, res: Response) : Promise<void> =>
   {
     let serverPrivateKey = await this.getServerPrivateKey();
-
     if(!serverPrivateKey) { console.debug("Could not fetch server private keys"); res.sendStatus(0); return;}
-
-    let privateKey = createPrivateKey(serverPrivateKey);
-    console.log(privateKey)
 
     if(!req.body) { console.debug("No body"); res.sendStatus(400); return; }
     
@@ -90,13 +86,13 @@ export class Key implements IControllerBase
 
     // Decrypt so we can verify the signature
     let verifiedAndConfidentialOrder = data.signedAndEncryptedOrder;
+    
     let vAndCBuff = Buffer.from(verifiedAndConfidentialOrder, 'base64');
-    let signature = privateDecrypt({key: privateKey, oaepHash: 'sha256'}, vAndCBuff)
+    let signature = privateDecrypt({key: serverPrivateKey, oaepHash: 'sha256'}, vAndCBuff)
 
     // Decrypt so we have something to verify against
     let confidentialOrder = Buffer.from(data.encryptedOrder, 'base64');
-    let plainTextOrder = privateDecrypt({key: privateKey, oaepHash: 'sha256'}, confidentialOrder);
-    console.log(confidentialOrder.toString('utf-8'))
+    let plainTextOrder = privateDecrypt({key: serverPrivateKey, oaepHash: 'sha256'}, confidentialOrder);
     let userId = data.user;
     if(await this.verify(userId, plainTextOrder, signature, keyType))
     {

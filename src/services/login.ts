@@ -29,10 +29,9 @@ export class Login implements IControllerBase
   validateLoginHandler = async (req : Request, res : Response) : Promise<void> =>
   {
     if(!req.body) { console.debug("No body included."); res.sendStatus(400); return; }
-    if(!req.body.data) { console.debug("No data was passed in body."); res.sendStatus(400); return; }
     
     // TODO: Type user
-    let user_data = JSON.parse(req.body.data);
+    let user_data = req.body;
     
     if(!user_data.username) { console.debug("No username included."); res.sendStatus(400); return; }
     if(!user_data.password) { console.debug("No password included."); res.sendStatus(400); return; }
