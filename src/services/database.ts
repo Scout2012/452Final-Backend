@@ -6,7 +6,7 @@ import { MongoClient, InsertOneWriteOpResult, Collection, ObjectId } from "mongo
 import  { IProduct, IOrder, IUser, IServerKey, CollectionName, PrettyCollection, IUserKeyPair } from '../interfaces/database';
 import { EncryptType, IKeyPair } from "../interfaces/key/types";
 import * as dotenv from 'dotenv';
-import { publicDecrypt } from 'crypto'
+import { createHash } from 'crypto'
 
 dotenv.config();
 
@@ -294,9 +294,11 @@ export class Database implements IControllerBase
     let rsaKeyPair : IKeyPair | null = await rsa_key.createKeys();
     let dsaKeyPair : IKeyPair | null = await dsa_key.createKeys();
 
+    let password = createHash('SHA-256').update(user.password).digest('hex')
+
     if(!rsaKeyPair || !dsaKeyPair) { console.debug("Could not generate one of the keypairs!"); res.sendStatus(0); return; }
 
-    if(await this.createUser(user.username, user.password, user.email, {rsa: rsaKeyPair, dsa: dsaKeyPair}) != "")
+    if(await this.createUser(user.username, password, user.email, {rsa: rsaKeyPair, dsa: dsaKeyPair}) != "")
     {
       res.status(200);
       res.send({ dsa: dsaKeyPair.privateKey, rsa: rsaKeyPair.privateKey });
