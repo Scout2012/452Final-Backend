@@ -13,6 +13,7 @@ Contributions of each members:
 	
 	Carlos Garcia
 		Front-end and back-end  
+		
 	Hounghuy Hourt
 		Documentation and front-end
 		
