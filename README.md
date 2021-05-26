@@ -13,6 +13,11 @@ How To Install:
 Running:
 - ts-node server.ts // Runs on port 8000
 
+Setting up Mongo:
+- Create a 'ServerKeys' and 'Stock' collection in MongoDB Compass
+- import the 'Stock' and 'ServerKeys' files into the respective collections
+- The rest of the collection will automatically be created when they're called by the code
+
 Note:
 We were not able to get the the actual encrypting and decrypting of the order functioning. 
 While we know how to perform the process in theory, and even coded it (as seen in the 
